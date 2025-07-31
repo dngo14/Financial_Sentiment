@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { apiRateLimiter } from '../../../lib/apiRateLimit';
 
 const POLYGON_API_KEY = 'Jp8Qyl_4vHhTJMjcqiE4SPhGHhdjY35f';
 const POLYGON_BASE_URL = 'https://api.polygon.io';
@@ -37,12 +38,18 @@ export async function GET(request: Request) {
 
     console.log(`Fetching ${type} for ${ticker} from Polygon.io...`);
     
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${POLYGON_API_KEY}`,
-      },
-      next: { revalidate: 300 } // Cache for 5 minutes
-    });
+    // Use rate limiter for API call
+    const response = await apiRateLimiter.executeCall(
+      () => fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${POLYGON_API_KEY}`,
+        },
+        next: { revalidate: 300 } // Cache for 5 minutes
+      }),
+      `polygon-${type}`,
+      'polygon',
+      ticker.toUpperCase()
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -96,6 +103,15 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error('Error fetching company data:', error);
+    
+    // Check if it's a rate limit error
+    if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
+      return NextResponse.json(
+        { error: error.message }, 
+        { status: 429 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch company data from Polygon.io' }, 
       { status: 500 }

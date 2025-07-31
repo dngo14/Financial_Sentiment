@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { apiRateLimiter } from '../../../lib/apiRateLimit';
 
 const FINNHUB_API_KEY = 'co50ivpr01qnik2v7320co50ivpr01qnik2v732g'; // From .env.example
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
@@ -20,12 +21,18 @@ export async function GET(request: Request) {
     
     console.log(`Fetching stock price for ${symbol} from Finnhub...`);
     
-    const response = await fetch(url, {
-      headers: {
-        'X-Finnhub-Token': FINNHUB_API_KEY,
-      },
-      next: { revalidate: 60 } // Cache for 1 minute
-    });
+    // Use rate limiter for API call
+    const response = await apiRateLimiter.executeCall(
+      () => fetch(url, {
+        headers: {
+          'X-Finnhub-Token': FINNHUB_API_KEY,
+        },
+        next: { revalidate: 60 } // Cache for 1 minute
+      }),
+      'finnhub-quote',
+      'finnhub',
+      symbol.toUpperCase()
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -47,6 +54,15 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error('Error fetching stock price:', error);
+    
+    // Check if it's a rate limit error
+    if (error instanceof Error && error.message.includes('Rate limit exceeded')) {
+      return NextResponse.json(
+        { error: error.message }, 
+        { status: 429 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch stock price from Finnhub' }, 
       { status: 500 }

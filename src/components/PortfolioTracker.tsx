@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { PortfolioHolding, FinnhubQuote, OptionPosition } from '../lib/types';
 import { TransactionManager } from '../lib/transactions';
+import APIStatus from './APIStatus';
 
 export default function PortfolioTracker() {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
@@ -77,6 +78,10 @@ export default function PortfolioTracker() {
                 currentPrice: quote.c,
                 lastUpdated: new Date().toISOString()
               };
+            } else if (response.status === 429) {
+              const errorData = await response.json();
+              console.warn(`Rate limit hit for ${holding.symbol}: ${errorData.error}`);
+              return holding; // Keep existing data
             }
             return holding;
           } catch (error) {
@@ -294,6 +299,7 @@ export default function PortfolioTracker() {
             PORTFOLIO_TRACKER_&_OPTIONS
           </h2>
           <div className="flex items-center gap-3">
+            <APIStatus className="mr-2" />
             <button
               onClick={() => updatePrices(holdings)}
               disabled={loading || holdings.length === 0}

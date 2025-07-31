@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { CompanyData, PolygonFinancials, PolygonNews, PolygonCompanyOverview, PolygonStockPrice } from '../lib/types';
+import { apiRateLimiter } from '../lib/apiRateLimit';
+import APIStatus from './APIStatus';
 
 interface CompanySearchProps {
   onClose: () => void;
@@ -20,36 +22,37 @@ export default function CompanySearch({ onClose }: CompanySearchProps) {
   const searchCompany = async (searchTicker: string) => {
     if (!searchTicker.trim()) return;
     
+    // Check if we have enough Polygon API calls available (need 4 calls)
+    const status = apiRateLimiter.getStatus();
+    if (status.remainingCalls < 4) {
+      const waitTime = Math.ceil(apiRateLimiter.getTimeUntilNextCall() / 1000);
+      setError(`Need 4 Polygon API calls for full lookup. ${status.remainingCalls} remaining. Wait ${waitTime}s or try again later.`);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
     try {
-      // Fetch overview, price, financials, and news in parallel
-      const [overviewResponse, priceResponse, financialsResponse, newsResponse] = await Promise.all([
-        fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=overview`),
-        fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=price`),
-        fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=financials`),
-        fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=news`)
-      ]);
+      // Fetch data sequentially to respect rate limits
+      // This uses 4 API calls: overview, price, financials, news
+      const overviewResponse = await fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=overview`);
+      const priceResponse = await fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=price`);
+      const financialsResponse = await fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=financials`);
+      const newsResponse = await fetch(`/api/company?ticker=${searchTicker.toUpperCase()}&type=news`);
 
-      if (!overviewResponse.ok) {
-        const errorData = await overviewResponse.json();
-        throw new Error(errorData.error || 'Failed to fetch company overview');
-      }
-
-      if (!priceResponse.ok) {
-        const errorData = await priceResponse.json();
-        throw new Error(errorData.error || 'Failed to fetch stock price');
-      }
-
-      if (!financialsResponse.ok) {
-        const errorData = await financialsResponse.json();
-        throw new Error(errorData.error || 'Failed to fetch financial data');
-      }
-
-      if (!newsResponse.ok) {
-        const errorData = await newsResponse.json();
-        throw new Error(errorData.error || 'Failed to fetch news data');
+      // Check responses and handle rate limit errors
+      const responses = [overviewResponse, priceResponse, financialsResponse, newsResponse];
+      const responseNames = ['overview', 'price', 'financials', 'news'];
+      
+      for (let i = 0; i < responses.length; i++) {
+        if (!responses[i].ok) {
+          const errorData = await responses[i].json();
+          if (responses[i].status === 429) {
+            throw new Error(`Rate limit exceeded on ${responseNames[i]} call: ${errorData.error}`);
+          }
+          throw new Error(errorData.error || `Failed to fetch ${responseNames[i]} data`);
+        }
       }
 
       const [overview, price, financials, news] = await Promise.all([
@@ -112,9 +115,12 @@ export default function CompanySearch({ onClose }: CompanySearchProps) {
       <div className="bg-white dark:bg-gray-900 rounded-lg border border-slate-200 dark:border-gray-700 w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-gray-700 bg-slate-50 dark:bg-gray-800">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white font-mono">
-            COMPANY_RESEARCH_TERMINAL
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white font-mono">
+              COMPANY_RESEARCH_TERMINAL
+            </h2>
+            <APIStatus />
+          </div>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-mono"
@@ -130,7 +136,7 @@ export default function CompanySearch({ onClose }: CompanySearchProps) {
               type="text"
               value={ticker}
               onChange={(e) => setTicker(e.target.value.toUpperCase())}
-              placeholder="Enter ticker symbol (e.g., AAPL)"
+              placeholder="Enter ticker symbol (e.g., AAPL) - Uses 4 Polygon API calls"
               className="flex-1 px-3 py-2 border border-slate-300 dark:border-gray-600 rounded bg-white dark:bg-black text-slate-800 dark:text-white font-mono text-sm focus:outline-none focus:border-green-400"
               disabled={loading}
             />
@@ -146,6 +152,9 @@ export default function CompanySearch({ onClose }: CompanySearchProps) {
               {loading ? 'SEARCHING...' : 'SEARCH'}
             </button>
           </form>
+          <div className="mt-2 text-xs font-mono text-slate-500 dark:text-gray-400">
+            Full company lookup requires 4 Polygon API calls (overview, price, financials, news)
+          </div>
         </div>
 
         {/* Error Display */}
