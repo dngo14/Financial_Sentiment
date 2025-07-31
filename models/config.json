@@ -1,0 +1,38 @@
+{
+  "models": {
+    "qwen3-4b-unified": {
+      "path": "qwen3-4b-unified-q4_0.gguf",
+      "type": "unified",
+      "description": "Qwen3-4B unified model for ALL AI tasks (Qwen2.5-7B performance in 3GB!)",
+      "context_size": 32768,
+      "threads": 6,
+      "memory_required_mb": 3000,
+      "features": [
+        "sentiment_analysis", 
+        "financial_news", 
+        "social_media",
+        "portfolio_analysis", 
+        "financial_chat", 
+        "investment_advice",
+        "market_analysis", 
+        "risk_assessment", 
+        "text_classification",
+        "budget_optimization",
+        "goal_planning",
+        "advanced_reasoning"
+      ],
+      "performance_level": "qwen2.5-7b_equivalent",
+      "architecture": "2025_latest"
+    }
+  },
+  "system": {
+    "total_memory_required_mb": 3000,
+    "recommended_ram_gb": 5,
+    "metal_support": true,
+    "quantization": "Q4_0",
+    "model_year": "2025",
+    "architecture": "unified_qwen3",
+    "performance_improvement": "7B_model_in_3GB_footprint",
+    "setup_date": "2025-07-31T16:40:30Z"
+  }
+}

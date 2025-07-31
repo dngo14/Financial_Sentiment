@@ -1,0 +1,17 @@
+{
+  "lastRefresh": {
+    "rss": 1753772765310,
+    "finnhub": 1753758054423,
+    "newsapi": 1753775120141,
+    "marketaux": 1753977261195,
+    "social": 1753771567155
+  },
+  "errors": {
+    "rss": [],
+    "finnhub": [],
+    "newsapi": [],
+    "marketaux": [],
+    "social": []
+  },
+  "totalFetches": 77
+}
