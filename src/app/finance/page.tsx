@@ -11,6 +11,7 @@ import GoalsTracker from '../../components/GoalsTracker';
 import BillTracker from '../../components/BillTracker';
 import TransactionHistory from '../../components/TransactionHistory';
 import PortfolioAnalytics from '../../components/PortfolioAnalytics';
+import RedditSentiment from '../../components/RedditSentiment';
 import APIStatus from '../../components/APIStatus';
 
 // Note: APIStatus only tracks Finnhub & Polygon APIs (5 calls/minute combined)
@@ -23,7 +24,7 @@ export default function FinancePage() {
   const [activeSubTab, setActiveSubTab] = useState<string>('dashboard');
 
   const tabs = [
-    { id: 'overview', label: 'OVERVIEW', icon: '📊', description: 'Dashboard & Net Worth' },
+    { id: 'overview', label: 'OVERVIEW', icon: '📊', description: 'Dashboard, Reddit & Net Worth' },
     { id: 'investments', label: 'INVESTMENTS', icon: '📈', description: 'Portfolio & Analytics' },
     { id: 'planning', label: 'PLANNING', icon: '🎯', description: 'Budget, Goals, Bills & Debt' },
     { id: 'transactions', label: 'TRANSACTIONS', icon: '📋', description: 'Transaction History' }
@@ -98,7 +99,8 @@ export default function FinancePage() {
             <nav className="flex overflow-x-auto justify-center">
               {activeTab === 'overview' && [
                 { id: 'dashboard', label: 'DASHBOARD', icon: '📊' },
-                { id: 'networth', label: 'NET_WORTH', icon: '🏦' }
+                { id: 'networth', label: 'NET_WORTH', icon: '🏦' },
+                { id: 'reddit', label: 'REDDIT', icon: '🔴' }
               ].map(subTab => (
                 <button
                   key={subTab.id}
@@ -161,6 +163,7 @@ export default function FinancePage() {
       <div className="container mx-auto px-4 py-6">
         {/* Overview Tab Content */}
         {activeTab === 'overview' && activeSubTab === 'dashboard' && <FinancialDashboard />}
+        {activeTab === 'overview' && activeSubTab === 'reddit' && <RedditSentiment />}
         {activeTab === 'overview' && activeSubTab === 'networth' && <NetWorthTracker />}
         
         {/* Investments Tab Content */}
