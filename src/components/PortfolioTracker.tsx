@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { PortfolioHolding, FinnhubQuote, OptionPosition } from '../lib/types';
 import { TransactionManager } from '../lib/transactions';
 import APIStatus from './APIStatus';
+import AIInsights from './AIInsights';
 
 export default function PortfolioTracker() {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
@@ -840,6 +841,21 @@ export default function PortfolioTracker() {
             </div>
           )
         )}
+      </div>
+
+      {/* AI Portfolio Insights */}
+      <div className="mt-6">
+        <AIInsights 
+          type="portfolio" 
+          data={{
+            holdings,
+            options,
+            totalValue: calculateTotalValue(),
+            cash: 0, // You might want to add cash tracking
+            performance: formatPercent(totalGainLossPercent)
+          }}
+          compact
+        />
       </div>
     </div>
   );
